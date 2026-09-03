@@ -95,7 +95,12 @@ export default function Catalogo() {
                   height: '100%',
                   borderRadius: '18px',
                   overflow: 'hidden',
-                  background: `url(/images/themes/${theme.id}.jpg) center / cover no-repeat, linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
+                  // La capa de degradado oscuro va PRIMERO (se pinta encima) para oscurecer un
+                  // poco la parte de arriba de la foto -- a este tamaño tan chico (150x300) el
+                  // nombre "Emma Elizabeth" que ya viene dibujado dentro de la imagen se ve
+                  // encimado con la foto en temas de bajo contraste (ej. Eucalipto Botánico,
+                  // texto dorado sobre fondo cálido). No mueve nada, solo mejora la legibilidad.
+                  background: `linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.16) 28%, transparent 50%), url(/images/themes/${theme.id}.jpg) center / cover no-repeat, linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
                 }} />
               </div>
               <h3 style={{
