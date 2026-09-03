@@ -1,6 +1,50 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+// Vista previa en vivo de un tema: en vez de una foto estática recortada (que cortaba el
+// nombre "Emma Elizabeth" a este tamaño tan chico), incrusta la MISMA invitación real que ve
+// un invitado (?embed=true&tema=<id>, modo hecho a propósito para esto en administradorinvitamx
+// -- ver su App.tsx) a su tamaño natural de celular, y la encoge con un transform:scale(). Así
+// el texto siempre se ve como se diseñó (se ajusta de línea, nunca se corta), igual que las
+// miniaturas de la landing (que incrustan ese mismo catálogo en vivo). pointerEvents:'none' deja
+// que el clic pase a la tarjeta de afuera (el flujo de WhatsApp de este sitio sigue intacto).
+const IFRAME_W = 354;
+const IFRAME_H = 642;
+
+function ThemePreview({ themeId, index }: { themeId: string; index: number }) {
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    // Carga escalonada (igual que el catálogo interno) para no disparar 12 iframes completos
+    // de golpe -- cada uno carga la app entera de administradorinvitamx.
+    const timer = setTimeout(() => setShouldRender(true), 150 + index * 100);
+    return () => clearTimeout(timer);
+  }, [index]);
+
+  if (!shouldRender) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>Cargando...</span>
+      </div>
+    );
+  }
+
+  return (
+    <iframe
+      src={`https://administradorinvitamx.vercel.app/?embed=true&tema=${themeId}`}
+      title={`Vista previa ${themeId}`}
+      style={{
+        width: `${IFRAME_W}px`,
+        height: `${IFRAME_H}px`,
+        border: 0,
+        transform: 'scale(0.4237)',
+        transformOrigin: 'top left',
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
 
 export default function Catalogo() {
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
@@ -46,7 +90,7 @@ export default function Catalogo() {
           gap: '28px',
           marginBottom: '3rem',
         }}>
-          {themes.map((theme) => (
+          {themes.map((theme, i) => (
             <div
               key={theme.id}
               onClick={() => handleSelectTheme(theme.nombre)}
@@ -95,13 +139,10 @@ export default function Catalogo() {
                   height: '100%',
                   borderRadius: '18px',
                   overflow: 'hidden',
-                  // La capa de degradado oscuro va PRIMERO (se pinta encima) para oscurecer un
-                  // poco la parte de arriba de la foto -- a este tamaño tan chico (150x300) el
-                  // nombre "Emma Elizabeth" que ya viene dibujado dentro de la imagen se ve
-                  // encimado con la foto en temas de bajo contraste (ej. Eucalipto Botánico,
-                  // texto dorado sobre fondo cálido). No mueve nada, solo mejora la legibilidad.
-                  background: `linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.16) 28%, transparent 50%), url(/images/themes/${theme.id}.jpg) center / cover no-repeat, linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
-                }} />
+                  background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
+                }}>
+                  <ThemePreview themeId={theme.id} index={i} />
+                </div>
               </div>
               <h3 style={{
                 marginTop: '0.75rem',
