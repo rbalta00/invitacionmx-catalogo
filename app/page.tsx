@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // Vista previa en vivo de un tema: en vez de una foto estática recortada (que cortaba el
 // nombre "Emma Elizabeth" a este tamaño tan chico), incrusta la MISMA invitación real que ve
@@ -9,11 +9,19 @@ import { useState, useEffect } from 'react';
 // el texto siempre se ve como se diseñó (se ajusta de línea, nunca se corta), igual que las
 // miniaturas de la landing (que incrustan ese mismo catálogo en vivo). pointerEvents:'none' deja
 // que el clic pase a la tarjeta de afuera (el flujo de WhatsApp de este sitio sigue intacto).
+//
+// La escala se MIDE en vivo contra el contenedor real (con ResizeObserver) en vez de asumir un
+// número fijo: el marco del teléfono (padding + borde) deja menos ancho útil que los 150px
+// nominales de la tarjeta -- con una escala fija calculada sobre 150px, el iframe salía más
+// ancho que su contenedor y overflow:hidden lo recortaba del lado derecho (se veía "descentrado"
+// y con el nombre cortado, justo lo que se estaba intentando arreglar).
 const IFRAME_W = 354;
 const IFRAME_H = 642;
 
 function ThemePreview({ themeId, index }: { themeId: string; index: number }) {
   const [shouldRender, setShouldRender] = useState(false);
+  const [scale, setScale] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Carga escalonada (igual que el catálogo interno) para no disparar 12 iframes completos
@@ -22,27 +30,37 @@ function ThemePreview({ themeId, index }: { themeId: string; index: number }) {
     return () => clearTimeout(timer);
   }, [index]);
 
-  if (!shouldRender) {
-    return (
-      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>Cargando...</span>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const medir = () => setScale(el.clientWidth / IFRAME_W);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   return (
-    <iframe
-      src={`https://administradorinvitamx.vercel.app/?embed=true&tema=${themeId}`}
-      title={`Vista previa ${themeId}`}
-      style={{
-        width: `${IFRAME_W}px`,
-        height: `${IFRAME_H}px`,
-        border: 0,
-        transform: 'scale(0.4237)',
-        transformOrigin: 'top left',
-        pointerEvents: 'none',
-      }}
-    />
+    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {!shouldRender || scale === 0 ? (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>Cargando...</span>
+        </div>
+      ) : (
+        <iframe
+          src={`https://administradorinvitamx.vercel.app/?embed=true&tema=${themeId}`}
+          title={`Vista previa ${themeId}`}
+          style={{
+            width: `${IFRAME_W}px`,
+            height: `${IFRAME_H}px`,
+            border: 0,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+    </div>
   );
 }
 
