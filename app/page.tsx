@@ -18,16 +18,73 @@ import { useState, useEffect, useRef } from 'react';
 const IFRAME_W = 354;
 const IFRAME_H = 642;
 
+// Cola de concurrencia compartida por todas las miniaturas de la página: cada vista previa
+// carga la app ENTERA de administradorinvitamx (React + Google Fonts + generar el HTML), y
+// probado en vivo, una sola tarda ~5.6s -- pero varias al mismo tiempo compiten tanto por CPU
+// y red que se disparan entre sí a 60-90+ segundos (algunas parecían quedarse pegadas). No
+// basta con "solo cargar lo visible" (siguen siendo ~6 a la vez); hace falta un límite real de
+// cuántas cargan AL MISMO TIEMPO, con las demás esperando su turno en cola.
+const MAX_CARGAS_SIMULTANEAS = 2;
+let cargasActivas = 0;
+const colaDeEspera: Array<() => void> = [];
+
+function pedirTurno(): Promise<void> {
+  if (cargasActivas < MAX_CARGAS_SIMULTANEAS) {
+    cargasActivas++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => colaDeEspera.push(resolve));
+}
+
+function liberarTurno() {
+  const siguiente = colaDeEspera.shift();
+  if (siguiente) {
+    siguiente(); // el cupo pasa directo al siguiente en la fila, cargasActivas no cambia
+  } else {
+    cargasActivas = Math.max(0, cargasActivas - 1);
+  }
+}
+
 function ThemePreview({ themeId, index }: { themeId: string; index: number }) {
   const [shouldRender, setShouldRender] = useState(false);
   const [scale, setScale] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  // true entre el momento en que se toma un turno de la cola y el momento en que se libera --
+  // se checa Y se apaga en el mismo paso en los dos lugares que pueden liberarlo (el timer
+  // normal, o el cleanup si el componente se desmonta antes), para nunca liberar dos veces el
+  // mismo turno por accidente.
+  const turnoActivo = useRef(false);
+
+  const soltarTurnoUnaVez = () => {
+    if (turnoActivo.current) {
+      turnoActivo.current = false;
+      liberarTurno();
+    }
+  };
 
   useEffect(() => {
-    // Carga escalonada (igual que el catálogo interno) para no disparar 12 iframes completos
-    // de golpe -- cada uno carga la app entera de administradorinvitamx.
-    const timer = setTimeout(() => setShouldRender(true), 150 + index * 100);
-    return () => clearTimeout(timer);
+    // Solo pide su turno cuando la tarjeta está por entrar en pantalla (rootMargin la
+    // adelanta un poco) -- las que están abajo del todo ni siquiera hacen fila hasta que se
+    // acerca el scroll.
+    const el = containerRef.current;
+    if (!el) return;
+    let cancelado = false;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        io.disconnect();
+        pedirTurno().then(() => {
+          if (cancelado) { liberarTurno(); return; }
+          turnoActivo.current = true;
+          setShouldRender(true);
+        });
+      }
+    }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => {
+      cancelado = true;
+      io.disconnect();
+      soltarTurnoUnaVez();
+    };
   }, [index]);
 
   useEffect(() => {
@@ -39,6 +96,19 @@ function ThemePreview({ themeId, index }: { themeId: string; index: number }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!shouldRender) return;
+    // Libera el turno un rato después de empezar a cargar, no cuando el iframe dispara "load"
+    // -- ese evento del navegador llega apenas termina el HTML inicial de administradorinvitamx,
+    // MUCHO antes de que su propio React monte, genere la invitación y la reemplace con
+    // document.write (que es lo realmente pesado). Medido en vivo y aislado, una vista previa
+    // completa tarda ~5.6s -- 6.5s de margen deja que termine antes de ceder el turno a la
+    // siguiente en la fila.
+    const timer = setTimeout(soltarTurnoUnaVez, 6500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldRender]);
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -154,7 +224,13 @@ export default function Catalogo() {
                 }} />
                 <div style={{
                   width: '100%',
-                  height: '100%',
+                  // Antes: height:'100%' estiraba esta caja a los 274px completos del marco,
+                  // pero el iframe escalado (que respeta la proporción real 354:642 de la
+                  // invitación) solo llega a ~225px de alto -- el sobrante de abajo se veía
+                  // como un bloque de color liso (el gradiente de respaldo), no el fondo real
+                  // del tema. Usando la MISMA proporción aquí, la caja mide justo lo que el
+                  // iframe realmente ocupa -- sin hueco, sin color de relleno de más.
+                  aspectRatio: `${IFRAME_W} / ${IFRAME_H}`,
                   borderRadius: '18px',
                   overflow: 'hidden',
                   background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
