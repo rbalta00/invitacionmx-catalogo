@@ -23,4 +23,4 @@ if ($hayCambios) {
 }
 
 vercel --prod
-Write-Host "`n✓ Listo: guardado, subido y publicado." -ForegroundColor Green
+Write-Host "Listo: guardado, subido y publicado." -ForegroundColor Green
