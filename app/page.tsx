@@ -151,6 +151,8 @@ export default function Catalogo() {
     { id: 'neon', nombre: 'Ciber Cyber Neon ⚡', primary: '#FF007F', dark: '#05050B' },
     { id: 'coquette-pink', nombre: 'XV Coquette Listones Rose 🎀', primary: '#E45D8C', dark: '#472F35' },
     { id: 'coquette-luxe', nombre: 'XV Coquette Luxe 💎', primary: '#C66B8F', dark: '#1A1A1A' },
+    { id: 'aurora-boreal', nombre: 'Aurora Boreal 🌌', primary: '#00D9FF', dark: '#050f2d' },
+    { id: 'vino-elegante', nombre: 'Vino Elegante 🍷', primary: '#7B1E3A', dark: '#2A0E14' },
   ];
 
   const handleSelectTheme = (themeName: string) => {
