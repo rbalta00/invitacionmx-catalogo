@@ -170,7 +170,7 @@ export default function Catalogo() {
             ✨ Catálogo de Temas XV
           </h1>
           <p style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-            Explora nuestros 12 temas elegantes. Selecciona el que más te guste y cuéntanos por WhatsApp.
+            Explora nuestros 14 temas elegantes. Selecciona el que más te guste y cuéntanos por WhatsApp.
           </p>
         </div>
 
