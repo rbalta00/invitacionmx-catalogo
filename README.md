@@ -44,4 +44,4 @@ NEXT_PUBLIC_WHATSAPP_NUMBER=2217445410
 
 ## Deployment
 
-Conectar a Vercel y deployer en `catalogo.invitamx.online` o subdominio similar.
+Conectar a Vercel y deployer en `catalogo.invitamx.app` o subdominio similar (dominio principal desde el 19 de noviembre de 2026 -- `invitamx.online` sigue redirigiendo ahí hasta junio de 2027).

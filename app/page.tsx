@@ -118,7 +118,7 @@ function ThemePreview({ themeId, index }: { themeId: string; index: number }) {
         </div>
       ) : (
         <iframe
-          src={`https://administradorinvitamx.vercel.app/?embed=true&tema=${themeId}`}
+          src={`https://invitaciones.invitamx.app/?embed=true&tema=${themeId}`}
           title={`Vista previa ${themeId}`}
           style={{
             width: `${IFRAME_W}px`,
@@ -174,7 +174,7 @@ function AperturaDemoIframe({ apertura }: { apertura: string }) {
         </div>
       ) : (
         <iframe
-          src={`https://administradorinvitamx.vercel.app/?embed=true&tema=${TEMA_DEMO_APERTURAS}&apertura=${apertura}`}
+          src={`https://invitaciones.invitamx.app/?embed=true&tema=${TEMA_DEMO_APERTURAS}&apertura=${apertura}`}
           title={`Apertura ${apertura}`}
           style={{
             width: `${IFRAME_W}px`,
