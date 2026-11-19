@@ -134,6 +134,169 @@ function ThemePreview({ themeId, index }: { themeId: string; index: number }) {
   );
 }
 
+// Las 5 animaciones de apertura reales del generador (ver tipoAperturaPorDefectoDelTema en
+// administradorinvitamx/src/App.tsx) -- ninguna se veía en ningún lado del catálogo hasta ahora
+// (las tarjetas de tema excluyen la pantalla de apertura a propósito, ver ThemePreview arriba).
+const APERTURAS: { id: string; nombre: string }[] = [
+  { id: 'sobre', nombre: 'Sobre con sello de cera' },
+  { id: 'cortina', nombre: 'Cortina de gala' },
+  { id: 'tarjeta', nombre: 'Tarjeta' },
+  { id: 'puertas', nombre: 'Puertas de Gala' },
+  { id: 'destellos', nombre: 'Destellos' },
+];
+
+// Tema fijo para este demo -- la sección es sobre las APERTURAS, no sobre temas, así que no
+// hace falta dejar elegir tema aquí también (las tarjetas de arriba ya cubren eso).
+const TEMA_DEMO_APERTURAS = 'dorado-clasico';
+
+// Mismo tratamiento visual (marco/escala) que ThemePreview, pero para un solo demo a la vez --
+// key={apertura} en el call site fuerza que React desmonte y vuelva a montar este componente
+// (y por lo tanto recargue el iframe desde cero) cada vez que se cambia de pestaña.
+function AperturaDemoIframe({ apertura }: { apertura: string }) {
+  const [scale, setScale] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const medir = () => setScale(el.clientWidth / IFRAME_W);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {scale === 0 ? (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>Cargando...</span>
+        </div>
+      ) : (
+        <iframe
+          src={`https://administradorinvitamx.vercel.app/?embed=true&tema=${TEMA_DEMO_APERTURAS}&apertura=${apertura}`}
+          title={`Apertura ${apertura}`}
+          style={{
+            width: `${IFRAME_W}px`,
+            height: `${IFRAME_H}px`,
+            border: 0,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function AperturaDemoSection() {
+  const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+  const [apertura, setApertura] = useState('puertas');
+  const aperturaActual = APERTURAS.find((a) => a.id === apertura) ?? APERTURAS[3];
+
+  const handleWhatsApp = () => {
+    const text = `Hola, quiero mi muestra gratis con la apertura de ${aperturaActual.nombre}, ¿qué datos te mando?`;
+    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  return (
+    <div style={{
+      background: 'var(--bg-white)',
+      borderRadius: '12px',
+      padding: '2.5rem 2rem',
+      border: '1px solid var(--border)',
+      textAlign: 'center',
+      marginBottom: '3rem',
+    }}>
+      <h2 style={{ fontSize: '24px', color: 'var(--primary-dark)', marginBottom: '0.75rem' }}>
+        Mira cómo se abre tu invitación
+      </h2>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto' }}>
+        Tu invitación puede abrir de 5 formas distintas. Toca una y pruébala aquí mismo:
+      </p>
+
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: '8px',
+        marginBottom: '2rem',
+      }}>
+        {APERTURAS.map((a) => (
+          <button
+            key={a.id}
+            onClick={() => setApertura(a.id)}
+            style={{
+              background: apertura === a.id ? 'var(--primary)' : 'var(--bg-light)',
+              color: apertura === a.id ? 'white' : 'var(--text-primary)',
+              border: `1px solid ${apertura === a.id ? 'var(--primary)' : 'var(--border)'}`,
+              padding: '8px 16px',
+              borderRadius: '999px',
+              fontSize: '13px',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+          >
+            {a.nombre}
+          </button>
+        ))}
+      </div>
+
+      <div style={{
+        width: '220px',
+        aspectRatio: `${IFRAME_W} / ${IFRAME_H}`,
+        margin: '0 auto 1.5rem',
+        borderRadius: '28px',
+        border: '3px solid var(--primary)',
+        background: '#1a1a1a',
+        padding: '10px',
+        boxShadow: '0 16px 32px rgba(0,0,0,0.2)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '44px',
+          height: '12px',
+          background: '#1a1a1a',
+          border: '2px solid var(--primary)',
+          borderRadius: '8px',
+          zIndex: 2,
+        }} />
+        <div style={{ width: '100%', height: '100%', borderRadius: '18px', overflow: 'hidden' }}>
+          <AperturaDemoIframe key={apertura} apertura={apertura} />
+        </div>
+      </div>
+
+      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+        Las 5 van incluidas en todos los planes. En tu muestra gratis te la dejamos con la que más te guste.
+      </p>
+
+      <button
+        onClick={handleWhatsApp}
+        style={{
+          background: 'var(--primary)',
+          color: 'white',
+          border: 'none',
+          padding: '12px 32px',
+          borderRadius: '8px',
+          fontSize: '16px',
+          fontWeight: 500,
+          transition: 'all 0.3s',
+        }}
+        onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+        onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+      >
+        Quiero mi muestra gratis
+      </button>
+    </div>
+  );
+}
+
 export default function Catalogo() {
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
@@ -157,7 +320,7 @@ export default function Catalogo() {
 
   const handleSelectTheme = (themeName: string) => {
     setSelectedTheme(themeName);
-    const text = `Hola, me encanta el tema "${themeName}" de tu catálogo. ¿Cuáles son los planes disponibles?`;
+    const text = `Hola, me encanta el tema "${themeName}" de tu catálogo. Quiero mi muestra gratis, ¿qué datos te mando?`;
     const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -253,6 +416,8 @@ export default function Catalogo() {
             </div>
           ))}
         </div>
+
+        <AperturaDemoSection />
 
         <div style={{
           background: 'var(--bg-white)',
